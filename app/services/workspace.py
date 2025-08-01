@@ -12,7 +12,7 @@ os.makedirs(STORAGE_DIR, exist_ok=True)
 
 # Dummy function to simulate extracting user ID from token
 def extract_user_id(token):
-    return "user123"  
+    return token  
 
 
 def create_workspace(name, token):
@@ -55,3 +55,29 @@ def create_workspace(name, token):
         "instance_id": instance_id,
         "created_at": created_at
     }
+
+
+def list_workspaces(token):
+    # 1. Extract user_id from the token (username in your case)
+    user_id = extract_user_id(token)
+
+    # 2. Load the metadata file
+    meta_path = os.path.join(STORAGE_DIR, META_FILE)
+    if not os.path.exists(meta_path):
+        return {"instances": []}  # No workspaces exist
+
+    meta_df = pd.read_json(meta_path)
+
+    # 3. Filter rows for the user
+    user_instances = meta_df[meta_df["user_id"] == user_id]
+
+    # 4. Order by created_at descending
+    user_instances = user_instances.sort_values(by="created_at", ascending=False)
+
+    # 5. Build response list
+    instances = user_instances[["instance_id", "name"]].rename(
+        columns={"instance_id": "id"}
+    ).to_dict(orient="records")
+
+    return {"instances": instances}
+
