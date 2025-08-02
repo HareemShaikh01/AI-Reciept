@@ -205,5 +205,7 @@ def delete_workspace(token, instance_id):
     if os.path.exists(csv_path):
         os.remove(csv_path)
 
-    # Step 6: Return success response
+    # step 6 delete associated reciept files
+    # PENDING
+
     return {"deleted": True}, 200
