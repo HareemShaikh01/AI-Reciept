@@ -129,3 +129,47 @@ def get_workspace(instance_id, token):
         "total_spend": total_spend,
         "categories": categories
     }, 200
+
+
+def update_workspace(instance_id, token, data):
+    user_id = extract_user_id(token)
+
+    # Step 1: Load metadata
+    meta_path = os.path.join(STORAGE_DIR, META_FILE)
+    if not os.path.exists(meta_path):
+        return {"error": "Metadata not found"}, 500
+
+    meta_df = pd.read_json(meta_path)
+
+    # Step 2: Find the workspace
+    workspace_row = meta_df[meta_df["instance_id"] == instance_id]
+    if workspace_row.empty:
+        return {"error": "Workspace not found"}, 404
+
+    idx = workspace_row.index[0]
+
+    # Step 3: Authorization check
+    if meta_df.at[idx, "user_id"] != user_id:
+        return {"error": "Forbidden"}, 403
+
+    # Step 4: Reject if already archived
+    if "archived" in meta_df.columns and meta_df.at[idx, "archived"]:
+        return {"error": "Workspace is already archived"}, 400
+
+    # Step 5: Patch fields
+    if "name" in data and data["name"]:
+        meta_df.at[idx, "name"] = data["name"]
+
+    if "archived" in data:
+        if "archived" not in meta_df.columns:
+            meta_df["archived"] = False
+        meta_df.at[idx, "archived"] = data["archived"]
+
+    # Step 6: Save metadata
+    meta_df.to_json(meta_path, orient="records", indent=2)
+
+    # Step 7: Return updated info
+    return {
+        "instance_id": instance_id,
+        "name": meta_df.at[idx, "name"]
+    }, 200
