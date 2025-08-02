@@ -81,3 +81,51 @@ def list_workspaces(token):
 
     return {"instances": instances}
 
+
+
+
+def get_workspace(instance_id, token):
+    user_id = extract_user_id(token)
+
+    # Step 1: Load metadata
+    meta_path = os.path.join(STORAGE_DIR, META_FILE)
+    if not os.path.exists(meta_path):
+        return {"error": "No workspace exists"}, 404
+
+    meta_df = pd.read_json(meta_path)
+
+    # Step 2: Filter to get workspace details
+    workspace_details = meta_df[meta_df["instance_id"] == instance_id]
+
+    if workspace_details.empty:
+        return {"error": "Workspace not found"}, 404
+
+    if workspace_details.iloc[0]["user_id"] != user_id:
+        return {"error": f"Workspace does not belong to user {user_id}"}, 401
+
+    name = workspace_details.iloc[0]["name"]
+
+    # Step 3: Read instance CSV
+    csv_path = os.path.join(STORAGE_DIR, f"{instance_id}.csv")
+    if not os.path.exists(csv_path):
+        return {"error": "Workspace data file not found"}, 500
+
+    df = pd.read_csv(csv_path)
+
+    # Step 4: Calculate total spend
+    total_spend = df["amount"].sum()
+    total_spend = round(float(total_spend), 2)
+
+    # Step 5: Extract categories
+    if "category_id" in df.columns:
+        category_ids = df["category_id"].dropna().unique()
+        categories = [{"id": int(cid), "name": f"Category {int(cid)}"} for cid in category_ids]
+    else:
+        categories = []
+
+    return {
+        "instance_id": instance_id,
+        "name": name,
+        "total_spend": total_spend,
+        "categories": categories
+    }, 200

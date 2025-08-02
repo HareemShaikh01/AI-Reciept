@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from app.services.workspace import create_workspace,list_workspaces
+from app.services.workspace import create_workspace,list_workspaces,get_workspace
 
 workspace_bp = Blueprint("workspace_bp",__name__)
 
@@ -40,3 +40,17 @@ def listWorkspaces():
     result = list_workspaces(token)
     
     return result
+
+
+@workspace_bp.route("/v1/instances/<id>", methods=['GET'])
+def get_workspace_route(id):
+    # Step 1: Auth check
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    token = auth_header.split(" ")[1]  # Extract the token
+
+    # Step 2: Call internal function
+    resp, code = get_workspace(id, token)
+    return jsonify(resp), code
