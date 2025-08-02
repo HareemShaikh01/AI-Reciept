@@ -173,3 +173,37 @@ def update_workspace(instance_id, token, data):
         "instance_id": instance_id,
         "name": meta_df.at[idx, "name"]
     }, 200
+
+
+def delete_workspace(token, instance_id):
+    user_id = extract_user_id(token)
+
+    # Step 1: Load metadata
+    meta_path = os.path.join(STORAGE_DIR, META_FILE)
+    if not os.path.exists(meta_path):
+        return {"error": "Metadata not found"}, 500
+
+    meta_df = pd.read_json(meta_path)
+
+    # Step 2: Find the workspace
+    workspace_row = meta_df[meta_df["instance_id"] == instance_id]
+    if workspace_row.empty:
+        return {"error": "Workspace not found"}, 404
+
+    idx = workspace_row.index[0]
+
+    # Step 3: Authorization check
+    if meta_df.at[idx, "user_id"] != user_id:
+        return {"error": "Forbidden"}, 403
+
+    # Step 4: Delete the row from metadata
+    meta_df = meta_df.drop(index=idx)
+    meta_df.to_json(meta_path, orient="records", indent=2)
+
+    # Step 5: Delete the CSV file
+    csv_path = os.path.join(STORAGE_DIR, f"{instance_id}.csv")
+    if os.path.exists(csv_path):
+        os.remove(csv_path)
+
+    # Step 6: Return success response
+    return {"deleted": True}, 200

@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from app.services.workspace import create_workspace,list_workspaces,get_workspace,update_workspace
+from app.services.workspace import create_workspace,list_workspaces,get_workspace,update_workspace,delete_workspace
 
 workspace_bp = Blueprint("workspace_bp",__name__)
 
@@ -68,3 +68,14 @@ def update_workspace_route(id):
     resp, code = update_workspace(id, token, data)
     return jsonify(resp), code
 
+
+@workspace_bp.route("/v1/instances/<id>",methods=['DELETE'])
+def delete_workspace_route(id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer'):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    token = auth_header.split(" ")[1]
+    resp,code = delete_workspace(token,id)
+
+    return jsonify(resp),code
